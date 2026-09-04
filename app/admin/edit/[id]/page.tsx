@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import RichTextEditor from "@/components/RichTextEditor";
 
 type Article = {
 id: number;
@@ -25,7 +24,26 @@ const CATEGORIES = [
 "Sports",
 "Startups",
 "Technology",
+"World News",
+"Global News",
+"Finance",
+"Economy",
+"Politics",
+"Science",
+"Health",
+"Environment",
+"Entertainment",
 ];
+
+function generateSlug(value: string) {
+return value
+.toLowerCase()
+.trim()
+.replace(/[^a-z0-9\s-]/g, "")
+.replace(/\s+/g, "-")
+.replace(/-+/g, "-")
+.replace(/^-+|-+$/g, "");
+}
 
 export default function EditArticlePage() {
 const params = useParams();
@@ -44,18 +62,7 @@ const [category, setCategory] = useState("Technology");
 const [author, setAuthor] = useState("");
 const [content, setContent] = useState("");
 const [imageUrl, setImageUrl] = useState("");
-const [status, setStatus] =
-useState<"draft" | "published">("draft");
-
-function generateSlug(value: string) {
-return value
-.toLowerCase()
-.trim()
-.replace(/[^a-z0-9\s-]/g, "")
-.replace(/\s+/g, "-")
-.replace(/-+/g, "-")
-.replace(/^-+|-+$/g, "");
-}
+const [status, setStatus] = useState<"draft" | "published">("draft");
 
 useEffect(() => {
 async function loadArticle() {
@@ -86,15 +93,14 @@ return;
     setAuthor(article.author || "");
     setContent(article.content || "");
     setImageUrl(article.image_url || "");
-
     setStatus(
-      article.status === "published"
-        ? "published"
-        : "draft"
+      article.status === "published" ? "published" : "draft"
     );
   } catch (error) {
     console.error("Load article error:", error);
+
     alert("Could not load this article.");
+
     router.push("/admin");
   } finally {
     setLoading(false);
@@ -132,13 +138,7 @@ if (!slug.trim()) {
   return;
 }
 
-const plainContent = content
-  .replace(/<[^>]*>/g, " ")
-  .replace(/&nbsp;/g, " ")
-  .replace(/\s+/g, " ")
-  .trim();
-
-if (!plainContent) {
+if (!content.trim()) {
   alert("Please enter article content.");
   return;
 }
@@ -147,6 +147,11 @@ setSaving(true);
 
 try {
   const finalSlug = generateSlug(slug);
+
+  if (!finalSlug) {
+    alert("Please enter a valid article URL.");
+    return;
+  }
 
   const { data: existingArticle, error: slugError } =
     await supabase
@@ -220,15 +225,11 @@ if (
 
 const plainText = content
 .replace(/<[^>]*>/g, " ")
-.replace(/ /g, " ")
-.replace(/&/g, "&")
-.replace(/</g, "<")
-.replace(/>/g, ">")
 .replace(/\s+/g, " ")
 .trim();
 
 const wordCount = plainText
-? plainText.split(" ").filter(Boolean).length
+? plainText.split(/\s+/).length
 : 0;
 
 const readTime = Math.max(
@@ -238,10 +239,10 @@ Math.ceil(wordCount / 220)
 
 if (loading) {
 return (
-<main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
-<div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-12">
+<main className="min-h-screen bg-slate-50">
+<div className="mx-auto max-w-7xl px-6 py-12">
 <div className="animate-pulse space-y-6">
-<div className="h-12 w-64 rounded-xl bg-slate-200" />
+<div className="h-12 w-64 rounded-lg bg-slate-200" />
 <div className="h-40 rounded-2xl bg-slate-200" />
 <div className="h-[600px] rounded-2xl bg-slate-200" />
 </div>
@@ -251,30 +252,35 @@ return (
 }
 
 return (
-<main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 text-slate-900">
-{/* HEADER */}
-<header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
-<div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-<Link href="/" className="flex items-center gap-3">
-<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-lg font-black text-white shadow-lg">
-G
-</div>
+<main className="min-h-screen bg-slate-50 text-slate-900">
+
+  <header className="sticky top-0 z-50 border-b border-slate-200 bg-white">
+    <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
+
+      <Link
+        href="/"
+        className="flex items-center gap-3"
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950 text-lg font-black text-white">
+          G
+        </div>
 
         <div>
-          <p className="font-black tracking-tight text-slate-950">
+          <p className="font-black tracking-tight">
             GLOBALYN
           </p>
 
-          <p className="text-xs font-medium text-purple-500">
-            ✨ Edit Article
+          <p className="text-xs text-slate-400">
+            Edit Article
           </p>
         </div>
       </Link>
 
       <div className="flex items-center gap-3">
+
         <Link
           href="/admin"
-          className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 sm:block"
+          className="hidden rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 sm:block"
         >
           ← Back
         </Link>
@@ -283,28 +289,27 @@ G
           type="button"
           onClick={saveArticle}
           disabled={saving}
-          className="rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-lg bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {saving ? "Saving..." : "💾 Save Changes"}
+          {saving ? "Saving..." : "Save Changes"}
         </button>
+
       </div>
     </div>
   </header>
 
-  {/* PAGE HERO */}
-  <section className="border-b border-slate-200 bg-white/70">
+  <section className="border-b border-slate-200 bg-white">
     <div className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14">
+
       <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
+
         <div>
-          <p className="text-sm font-bold uppercase tracking-widest text-purple-500">
-            Globalyn Content Editor
+          <p className="text-sm font-bold uppercase tracking-widest text-slate-400">
+            Content Editor
           </p>
 
           <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
-            Edit your{" "}
-            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
-              article.
-            </span>
+            Edit your article.
           </h1>
 
           <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-500">
@@ -313,40 +318,43 @@ G
         </div>
 
         <div className="flex gap-4">
-          <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white px-5 py-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-blue-500">
-              📝 Words
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Words
             </p>
 
-            <p className="mt-1 text-2xl font-black text-blue-700">
+            <p className="mt-1 text-2xl font-black">
               {wordCount}
             </p>
           </div>
 
-          <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white px-5 py-4 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-wider text-purple-500">
-              ⏱ Read Time
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Read Time
             </p>
 
-            <p className="mt-1 text-2xl font-black text-purple-700">
+            <p className="mt-1 text-2xl font-black">
               {readTime} min
             </p>
           </div>
+
         </div>
       </div>
     </div>
   </section>
 
-  {/* MAIN CONTENT */}
   <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-12">
+
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-      {/* LEFT SIDE */}
+
       <div className="space-y-8">
-        {/* ARTICLE INFORMATION */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40 sm:p-8">
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+
           <div className="border-b border-slate-100 pb-6">
-            <h2 className="text-xl font-black text-slate-950">
-              📄 Article Information
+            <h2 className="text-xl font-black">
+              Article Information
             </h2>
 
             <p className="mt-2 text-sm text-slate-500">
@@ -355,6 +363,7 @@ G
           </div>
 
           <div className="mt-7">
+
             <label className="block text-sm font-bold text-slate-800">
               Article Title *
             </label>
@@ -366,21 +375,24 @@ G
                 handleTitleChange(e.target.value)
               }
               placeholder="Enter your article title..."
-              className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-4 text-lg font-semibold outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+              className="mt-3 w-full rounded-lg border border-slate-300 px-4 py-3.5 text-lg font-semibold outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-100"
             />
+
           </div>
 
           <div className="mt-7">
+
             <label className="block text-sm font-bold text-slate-800">
-              🔗 Article URL *
+              Article URL *
             </label>
 
             <p className="mt-1 text-sm text-slate-500">
               This creates your article link.
             </p>
 
-            <div className="mt-3 flex overflow-hidden rounded-xl border border-slate-300">
-              <span className="flex items-center border-r border-slate-200 bg-gradient-to-r from-blue-50 to-purple-50 px-4 text-sm font-bold text-purple-500">
+            <div className="mt-3 flex overflow-hidden rounded-lg border border-slate-300">
+
+              <span className="flex items-center border-r border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-400">
                 /blog/
               </span>
 
@@ -391,129 +403,130 @@ G
                   setSlug(generateSlug(e.target.value))
                 }
                 placeholder="article-url"
-                className="min-w-0 flex-1 px-4 py-4 text-sm font-semibold outline-none"
+                className="min-w-0 flex-1 px-4 py-3.5 text-sm font-semibold outline-none"
               />
+
             </div>
           </div>
 
           <div className="mt-7">
-            <label className="block text-sm font-bold text-slate-800">
-              ✨ Article Excerpt
-            </label>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Write a short summary that will appear on Globalyn.
-            </p>
+            <label className="block text-sm font-bold text-slate-800">
+              Article Excerpt
+            </label>
 
             <textarea
               value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
+              onChange={(e) =>
+                setExcerpt(e.target.value)
+              }
               rows={4}
               placeholder="Write a short summary of your article..."
-              className="mt-3 w-full resize-none rounded-xl border border-slate-300 px-4 py-4 leading-7 outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+              className="mt-3 w-full resize-none rounded-lg border border-slate-300 px-4 py-3.5 leading-7 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-100"
             />
+
           </div>
+
         </div>
 
-        {/* ARTICLE CONTENT */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40 sm:p-8">
-          <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-6 sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-xl font-black text-slate-950">
-                ✍️ Article Content
-              </h2>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
 
-              <p className="mt-2 text-sm text-slate-500">
-                Write and format the complete content of your article.
-              </p>
-            </div>
+          <div className="border-b border-slate-100 pb-6">
+            <h2 className="text-xl font-black">
+              Article Content
+            </h2>
 
-            <div className="rounded-xl bg-gradient-to-r from-blue-100 to-purple-100 px-4 py-2 text-sm font-bold text-purple-700">
-              {wordCount} words
-            </div>
+            <p className="mt-2 text-sm text-slate-500">
+              Write the complete article content.
+            </p>
           </div>
 
-          <div className="mt-6">
-            <RichTextEditor
-              content={content}
-              onChange={setContent}
-            />
-          </div>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={28}
+            placeholder="Write your complete article here..."
+            className="mt-6 min-h-[600px] w-full resize-y rounded-lg border border-slate-300 px-5 py-5 text-base leading-8 text-slate-700 outline-none transition focus:border-slate-950 focus:ring-2 focus:ring-slate-100"
+          />
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-medium text-slate-400">
+          <div className="mt-4 flex justify-between text-xs text-slate-400">
             <span>{wordCount} words</span>
             <span>{content.length} characters</span>
           </div>
+
         </div>
+
       </div>
 
-      {/* RIGHT SIDEBAR */}
       <aside className="space-y-6 lg:sticky lg:top-24 lg:h-fit">
-        {/* PUBLISHING */}
-        <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 p-6 text-white shadow-2xl">
-          <p className="text-xs font-bold uppercase tracking-widest text-purple-300">
-            🚀 Publishing
+
+        <div className="rounded-2xl bg-slate-950 p-6 text-white shadow-lg">
+
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Publishing
           </p>
 
           <h2 className="mt-3 text-xl font-black">
             Publishing Status
           </h2>
 
-          <p className="mt-2 text-sm leading-6 text-slate-300">
-            Choose whether this article is private or publicly visible.
-          </p>
-
           <div className="mt-6 grid grid-cols-2 gap-3">
+
             <button
               type="button"
               onClick={() => setStatus("draft")}
-              className={`rounded-xl px-3 py-3 text-sm font-bold transition ${
+              className={`rounded-lg px-3 py-3 text-sm font-bold transition ${
                 status === "draft"
-                  ? "bg-white text-slate-950 shadow-lg"
-                  : "border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10"
+                  ? "bg-white text-slate-950"
+                  : "border border-white/10 bg-white/5 text-slate-400"
               }`}
             >
-              📝 Draft
+              Draft
             </button>
 
             <button
               type="button"
               onClick={() => setStatus("published")}
-              className={`rounded-xl px-3 py-3 text-sm font-bold transition ${
+              className={`rounded-lg px-3 py-3 text-sm font-bold transition ${
                 status === "published"
-                  ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg"
-                  : "border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10"
+                  ? "bg-emerald-500 text-white"
+                  : "border border-white/10 bg-white/5 text-slate-400"
               }`}
             >
-              🚀 Published
+              Published
             </button>
+
           </div>
 
           <button
             type="button"
             onClick={saveArticle}
             disabled={saving}
-            className="mt-4 w-full rounded-xl bg-white px-4 py-4 text-sm font-black text-slate-950 transition hover:scale-[1.02] hover:bg-purple-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-4 w-full rounded-lg bg-white px-4 py-3.5 text-sm font-black text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving..." : "💾 Save Changes"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
+
         </div>
 
-        {/* ARTICLE SETTINGS */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
-          <h2 className="text-lg font-black text-slate-950">
-            ⚙️ Article Settings
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
+          <h2 className="text-lg font-black">
+            Article Settings
           </h2>
 
           <div className="mt-6">
+
             <label className="block text-sm font-bold text-slate-800">
               Category
             </label>
 
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+              onChange={(e) =>
+                setCategory(e.target.value)
+              }
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-medium outline-none"
             >
               {CATEGORIES.map((item) => (
                 <option key={item} value={item}>
@@ -521,36 +534,40 @@ G
                 </option>
               ))}
             </select>
+
           </div>
 
           <div className="mt-6">
+
             <label className="block text-sm font-bold text-slate-800">
-              ✍️ Author
+              Author
             </label>
 
             <input
               type="text"
               value={author}
-              onChange={(e) => setAuthor(e.target.value)}
+              onChange={(e) =>
+                setAuthor(e.target.value)
+              }
               placeholder="Enter author name..."
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none"
             />
+
           </div>
+
         </div>
 
-        {/* FEATURED IMAGE */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40">
-          <h2 className="text-lg font-black text-slate-950">
-            🖼️ Featured Image
-          </h2>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
-          <p className="mt-2 text-sm text-slate-500">
-            Add or update your article image.
-          </p>
+          <h2 className="text-lg font-black">
+            Featured Image
+          </h2>
 
           {imageUrl ? (
             <div className="mt-5">
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
+
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+
                 <img
                   src={imageUrl}
                   alt="Article preview"
@@ -559,27 +576,32 @@ G
                     e.currentTarget.style.display = "none";
                   }}
                 />
+
               </div>
 
               <button
                 type="button"
                 onClick={removeImage}
-                className="mt-4 w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100"
+                className="mt-4 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600"
               >
-                🗑 Remove Image
+                Remove Image
               </button>
+
             </div>
           ) : (
-            <div className="mt-5 rounded-2xl border-2 border-dashed border-purple-200 bg-purple-50 px-5 py-8 text-center">
-              <div className="text-4xl">🖼️</div>
+            <div className="mt-5 rounded-xl border-2 border-dashed border-slate-200 px-5 py-8 text-center">
 
-              <p className="mt-3 text-sm font-medium text-purple-400">
+              <div className="text-3xl">🖼️</div>
+
+              <p className="mt-3 text-sm text-slate-400">
                 No featured image
               </p>
+
             </div>
           )}
 
           <div className="mt-5">
+
             <label className="block text-sm font-bold text-slate-800">
               Image URL
             </label>
@@ -587,34 +609,40 @@ G
             <input
               type="url"
               value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
+              onChange={(e) =>
+                setImageUrl(e.target.value)
+              }
               placeholder="https://example.com/image.jpg"
-              className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none"
             />
+
           </div>
+
         </div>
 
-        {/* PREVIEW */}
         {slug && (
           <Link
             href={`/blog/${slug}`}
             target="_blank"
-            className="flex w-full items-center justify-center rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 px-5 py-4 text-sm font-bold text-purple-700 shadow-sm transition hover:scale-[1.02]"
+            className="flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-700"
           >
             👁 Preview Article
           </Link>
         )}
 
-        {/* CANCEL */}
         <Link
           href="/admin"
-          className="flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-4 text-sm font-bold text-slate-600 shadow-sm transition hover:border-slate-950 hover:text-slate-950"
+          className="flex w-full items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3.5 text-sm font-bold text-slate-600"
         >
-          ← Cancel and Return
+          ← Cancel and return
         </Link>
+
       </aside>
+
     </div>
+
   </section>
+
 </main>
 
 );

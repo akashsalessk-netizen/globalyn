@@ -219,13 +219,24 @@ export default function NewArticle() {
     setImagePreview("");
   }
 
+  // SEO-friendly slug generator
+  // Removes emojis and special characters without creating unwanted hyphens
   function createSlug(text: string) {
     const slug = text
       .toLowerCase()
       .trim()
+
+      // Remove emojis and special characters
       .replace(/[^a-z0-9\s-]/g, "")
+
+      // Replace spaces with hyphens
       .replace(/\s+/g, "-")
-      .replace(/-+/g, "-");
+
+      // Remove duplicate hyphens
+      .replace(/-+/g, "-")
+
+      // Remove hyphens from the beginning and end
+      .replace(/^-+|-+$/g, "");
 
     return slug || `article-${Date.now()}`;
   }
@@ -358,7 +369,6 @@ export default function NewArticle() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#f7f8fc] text-slate-900">
-
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -left-48 -top-48 h-[600px] w-[600px] rounded-full bg-violet-300/25 blur-[150px]" />
 
@@ -369,18 +379,17 @@ export default function NewArticle() {
 
       <header className="sticky top-0 z-50 border-b border-white/60 bg-white/75 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-
           <Link
             href="/"
             className="group flex items-center gap-3"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 via-indigo-600 to-sky-500 font-black text-white shadow-lg">
-              M
+              G
             </div>
 
             <div>
               <p className="text-lg font-black text-slate-950">
-                MY BLOG
+                GLOBALYN
               </p>
 
               <p className="hidden text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 sm:block">
@@ -408,15 +417,12 @@ export default function NewArticle() {
           >
             ← Dashboard
           </Link>
-
         </div>
       </header>
 
       <section className="relative border-b border-white/60">
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
-
           <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white/80 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-violet-600 shadow-sm">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-violet-500" />
@@ -438,7 +444,6 @@ export default function NewArticle() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-
               <div className="rounded-2xl border border-white bg-white/80 px-5 py-4 shadow-sm">
                 <p className="text-xs font-bold uppercase text-slate-400">
                   Words
@@ -458,25 +463,18 @@ export default function NewArticle() {
                   {readTime} min
                 </p>
               </div>
-
             </div>
-
           </div>
-
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-5 py-10 sm:px-8 sm:py-14">
-
         <form
           onSubmit={saveArticle}
           className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]"
         >
-
           <div className="space-y-7">
-
             <div className="rounded-[2rem] border border-white bg-white/85 p-6 shadow-xl sm:p-9">
-
               <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600">
                 Story details
               </p>
@@ -511,15 +509,10 @@ export default function NewArticle() {
                   placeholder="Give readers a compelling reason to explore your article..."
                 />
               </label>
-
             </div>
 
-            {/* RICH TEXT EDITOR */}
-
             <div className="overflow-hidden rounded-[2rem] border border-white bg-white shadow-xl">
-
               <div className="border-b border-slate-100 px-6 py-5 sm:px-8">
-
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600">
                   Article editor
                 </p>
@@ -527,15 +520,10 @@ export default function NewArticle() {
                 <h2 className="mt-1 text-xl font-black">
                   Tell your story.
                 </h2>
-
               </div>
 
-              {/* TOOLBAR */}
-
               <div className="border-b border-slate-200 bg-slate-50 p-4 sm:p-5">
-
                 <div className="flex flex-wrap gap-2">
-
                   <button
                     type="button"
                     onMouseDown={(e) => {
@@ -584,8 +572,6 @@ export default function NewArticle() {
                     S
                   </button>
 
-                  {/* HEADINGS */}
-
                   <select
                     defaultValue=""
                     onMouseDown={saveSelection}
@@ -606,10 +592,7 @@ export default function NewArticle() {
                     <option value="h2">Heading 2</option>
                     <option value="h3">Heading 3</option>
                     <option value="p">Paragraph</option>
-
                   </select>
-
-                  {/* TEXT SIZE */}
 
                   <select
                     defaultValue=""
@@ -632,7 +615,6 @@ export default function NewArticle() {
                         {size}
                       </option>
                     ))}
-
                   </select>
 
                   <button
@@ -694,21 +676,15 @@ export default function NewArticle() {
                   >
                     Clear
                   </button>
-
                 </div>
 
-                {/* TEXT COLORS */}
-
                 <div className="mt-5 border-t border-slate-200 pt-5">
-
                   <p className="text-xs font-black uppercase tracking-wider text-slate-400">
                     Text color
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-
                     {COLORS.map((color) => (
-
                       <button
                         key={color.value}
                         type="button"
@@ -725,21 +701,15 @@ export default function NewArticle() {
                           backgroundColor: color.value,
                         }}
                       />
-
                     ))}
-
                   </div>
-
-                  {/* HIGHLIGHT */}
 
                   <p className="mt-5 text-xs font-black uppercase tracking-wider text-slate-400">
                     Highlight
                   </p>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-
                     {HIGHLIGHTS.map((color) => (
-
                       <button
                         key={color.value}
                         type="button"
@@ -757,16 +727,10 @@ export default function NewArticle() {
                       >
                         {color.name}
                       </button>
-
                     ))}
-
                   </div>
-
                 </div>
-
               </div>
-
-              {/* EDITOR */}
 
               <div
                 ref={editorRef}
@@ -784,27 +748,17 @@ export default function NewArticle() {
               />
 
               <div className="flex justify-between border-t border-slate-100 bg-slate-50 px-6 py-4 text-xs font-semibold text-slate-400">
-
                 <span>{wordCount} words</span>
 
                 <span>
                   Estimated {readTime} min read
                 </span>
-
               </div>
-
             </div>
-
           </div>
 
-          {/* SIDEBAR */}
-
           <aside className="space-y-6 xl:sticky xl:top-24 xl:h-fit">
-
-            {/* PUBLISH */}
-
             <div className="rounded-[2rem] bg-slate-950 p-6 shadow-2xl">
-
               <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-300">
                 Publishing
               </p>
@@ -814,7 +768,6 @@ export default function NewArticle() {
               </h2>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
-
                 <button
                   type="button"
                   onClick={() => setStatus("draft")}
@@ -838,7 +791,6 @@ export default function NewArticle() {
                 >
                   Publish
                 </button>
-
               </div>
 
               <button
@@ -852,19 +804,14 @@ export default function NewArticle() {
                   ? "🚀 Publish Article"
                   : "💾 Save Draft"}
               </button>
-
             </div>
 
-            {/* MODERN CUSTOM CATEGORY */}
-
             <div className="rounded-[2rem] border border-white bg-white p-6 shadow-lg">
-
               <p className="text-xs font-black uppercase tracking-[0.2em] text-violet-600">
                 Article settings
               </p>
 
               <div className="mt-6">
-
                 <label className="text-sm font-black">
                   Category
                 </label>
@@ -873,8 +820,7 @@ export default function NewArticle() {
                   Select a category or type your own custom category.
                 </p>
 
-                <div className="mt-3 relative">
-
+                <div className="relative mt-3">
                   <input
                     list="article-categories"
                     value={category}
@@ -888,13 +834,10 @@ export default function NewArticle() {
                       <option key={item} value={item} />
                     ))}
                   </datalist>
-
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-
                   {CATEGORIES.slice(0, 8).map((item) => (
-
                     <button
                       key={item}
                       type="button"
@@ -907,15 +850,11 @@ export default function NewArticle() {
                     >
                       {item}
                     </button>
-
                   ))}
-
                 </div>
-
               </div>
 
               <label className="mt-7 block">
-
                 <span className="text-sm font-black">
                   Author
                 </span>
@@ -926,23 +865,16 @@ export default function NewArticle() {
                   className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100"
                   placeholder="Your name"
                 />
-
               </label>
-
             </div>
 
-            {/* FEATURED IMAGE */}
-
             <div className="rounded-[2rem] border border-white bg-white p-6 shadow-lg">
-
               <h2 className="text-xl font-black">
                 Featured image
               </h2>
 
               {imagePreview ? (
-
                 <div className="mt-5">
-
                   <img
                     src={imagePreview}
                     alt="Featured preview"
@@ -956,13 +888,9 @@ export default function NewArticle() {
                   >
                     Remove image
                   </button>
-
                 </div>
-
               ) : (
-
                 <label className="mt-5 flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed border-slate-200 px-6 py-10 text-center transition hover:border-violet-300 hover:bg-violet-50/50">
-
                   <span className="text-4xl">
                     🖼️
                   </span>
@@ -981,11 +909,8 @@ export default function NewArticle() {
                     onChange={handleImageChange}
                     className="hidden"
                   />
-
                 </label>
-
               )}
-
             </div>
 
             <Link
@@ -994,15 +919,11 @@ export default function NewArticle() {
             >
               Cancel and return
             </Link>
-
           </aside>
-
         </form>
-
       </section>
 
       <style>{`
-
         .toolbar-button {
           height: 40px;
           min-width: 40px;
@@ -1095,9 +1016,7 @@ export default function NewArticle() {
             inset 0 0 0 2px
             rgba(139, 92, 246, 0.08);
         }
-
       `}</style>
-
     </main>
   );
 }
