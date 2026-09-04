@@ -1,7 +1,7 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -12,113 +12,30 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
   const [message, setMessage] = useState("");
-  const [sessionReady, setSessionReady] = useState(false);
+  const [messageType, setMessageType] = useState<"error" | "success">(
+    "error"
+  );
 
-  useEffect(() => {
-    async function handleRecovery() {
-      try {
-        // Supabase may return the recovery token in the URL hash
-        const hash = window.location.hash;
-
-        if (hash) {
-          const hashParams = new URLSearchParams(
-            hash.replace("#", "")
-          );
-
-          const accessToken = hashParams.get("access_token");
-          const refreshToken = hashParams.get("refresh_token");
-
-          if (accessToken && refreshToken) {
-            const { error } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-
-            if (error) {
-              throw error;
-            }
-
-            // Remove tokens from the browser URL
-            window.history.replaceState(
-              {},
-              document.title,
-              "/admin/reset-password"
-            );
-          }
-        }
-
-        // Check whether the recovery session now exists
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error) {
-          throw error;
-        }
-
-        if (session) {
-          setSessionReady(true);
-          setMessage("");
-        } else {
-          setMessage(
-            "Your password recovery session is missing or expired. Please request a new password recovery link."
-          );
-        }
-      } catch (error) {
-        console.error("Recovery session error:", error);
-
-        setMessage(
-          error instanceof Error
-            ? error.message
-            : "Could not verify your password recovery session."
-        );
-      } finally {
-        setCheckingSession(false);
-      }
-    }
-
-    handleRecovery();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (
-        (event === "PASSWORD_RECOVERY" ||
-          event === "SIGNED_IN") &&
-        session
-      ) {
-        setSessionReady(true);
-        setMessage("");
-        setCheckingSession(false);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  async function handleResetPassword(
-    e: React.FormEvent<HTMLFormElement>
-  ) {
+  async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault();
 
     setMessage("");
 
-    if (!password || !confirmPassword) {
-      setMessage("Please enter your new password.");
+    if (!password.trim() || !confirmPassword.trim()) {
+      setMessageType("error");
+      setMessage("Please enter and confirm your new password.");
       return;
     }
 
     if (password.length < 6) {
-      setMessage("Password must be at least 6 characters.");
+      setMessageType("error");
+      setMessage("Your password must be at least 6 characters long.");
       return;
     }
 
     if (password !== confirmPassword) {
+      setMessageType("error");
       setMessage("Passwords do not match.");
       return;
     }
@@ -126,61 +43,46 @@ export default function ResetPasswordPage() {
     setLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        throw new Error(
-          "Recovery session missing. Please request a new password recovery link."
-        );
-      }
-
       const { error } = await supabase.auth.updateUser({
-        password: password,
+        password,
       });
 
       if (error) {
-        throw error;
+        setMessageType("error");
+        setMessage(error.message);
+        return;
       }
 
-      alert(
-        "Password updated successfully! You can now sign in with your new password."
+      setMessageType("success");
+      setMessage(
+        "Your password has been changed successfully! Redirecting to login..."
       );
 
-      await supabase.auth.signOut();
+      setPassword("");
+      setConfirmPassword("");
 
-      router.push("/admin/login");
+      setTimeout(() => {
+        router.push("/login");
+        router.refresh();
+      }, 2000);
     } catch (error) {
       console.error("Password reset error:", error);
 
+      setMessageType("error");
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Could not update your password."
+        "Something went wrong while changing your password. Please try again."
       );
     } finally {
       setLoading(false);
     }
   }
 
-  if (checkingSession) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 px-5">
-        <div className="text-center text-white">
-          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-purple-400" />
-
-          <p className="mt-5 font-bold">
-            Verifying password recovery link...
-          </p>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 px-5 py-10">
       <div className="w-full max-w-md">
+
+        {/* LOGO */}
+
         <Link
           href="/"
           className="mb-8 flex items-center justify-center gap-3"
@@ -200,29 +102,34 @@ export default function ResetPasswordPage() {
           </div>
         </Link>
 
+        {/* RESET PASSWORD CARD */}
+
         <div className="rounded-3xl border border-white/10 bg-white p-7 shadow-2xl sm:p-9">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-purple-500">
-            Account Security
-          </p>
 
-          <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950">
-            Create a new password.
-          </h1>
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-purple-500">
+              Secure Account
+            </p>
 
-          <p className="mt-3 leading-7 text-slate-500">
-            Choose a new secure password for your GLOBALYN admin account.
-          </p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950">
+              Create a new password.
+            </h1>
 
-          {message && (
-            <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium leading-6 text-red-600">
-              {message}
-            </div>
-          )}
+            <p className="mt-3 leading-7 text-slate-500">
+              Choose a new secure password for your GLOBALYN Admin Studio
+              account.
+            </p>
+          </div>
+
+          {/* FORM */}
 
           <form
             onSubmit={handleResetPassword}
             className="mt-8 space-y-5"
           >
+
+            {/* NEW PASSWORD */}
+
             <div>
               <label className="block text-sm font-bold text-slate-800">
                 New Password
@@ -234,10 +141,15 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your new password"
                 autoComplete="new-password"
-                disabled={!sessionReady}
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
               />
+
+              <p className="mt-2 text-xs text-slate-400">
+                Use at least 6 characters.
+              </p>
             </div>
+
+            {/* CONFIRM PASSWORD */}
 
             <div>
               <label className="block text-sm font-bold text-slate-800">
@@ -247,45 +159,58 @@ export default function ResetPasswordPage() {
               <input
                 type="password"
                 value={confirmPassword}
-                onChange={(e) =>
-                  setConfirmPassword(e.target.value)
-                }
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm your new password"
                 autoComplete="new-password"
-                disabled={!sessionReady}
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
               />
             </div>
 
+            {/* MESSAGE */}
+
+            {message && (
+              <div
+                className={`rounded-xl px-4 py-3 text-sm font-medium ${
+                  messageType === "success"
+                    ? "border border-green-200 bg-green-50 text-green-700"
+                    : "border border-red-200 bg-red-50 text-red-600"
+                }`}
+              >
+                {message}
+              </div>
+            )}
+
+            {/* RESET BUTTON */}
+
             <button
               type="submit"
-              disabled={loading || !sessionReady}
-              className="w-full rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={loading}
+              className="w-full rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading
-                ? "Updating Password..."
-                : "Update Password →"}
+              {loading ? "Updating Password..." : "Reset Password →"}
             </button>
+
           </form>
 
-          {!sessionReady && (
-            <Link
-              href="/admin/login"
-              className="mt-6 block text-center text-sm font-bold text-purple-600"
-            >
-              ← Return to Login
-            </Link>
-          )}
+          {/* BACK TO LOGIN */}
 
           <div className="mt-7 border-t border-slate-100 pt-6 text-center">
+
             <Link
-              href="/"
+              href="/login"
               className="text-sm font-bold text-slate-500 transition hover:text-purple-600"
             >
-              ← Back to GLOBALYN
+              ← Back to Sign In
             </Link>
+
           </div>
+
         </div>
+
+        <p className="mt-6 text-center text-xs text-slate-400">
+          GLOBALYN Admin Studio • Secure Access
+        </p>
+
       </div>
     </main>
   );
