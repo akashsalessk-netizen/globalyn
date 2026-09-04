@@ -13,6 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://globalyn.vercel.app"),
+
   title: {
     default: "Globalyn | Global News, Business & Innovation",
     template: "%s | Globalyn",
@@ -27,6 +29,7 @@ export const metadata: Metadata = {
     "Global Business",
     "Technology News",
     "Innovation",
+    "Startup News",
     "Startups",
     "Artificial Intelligence",
     "AI News",
@@ -43,11 +46,16 @@ export const metadata: Metadata = {
   ],
 
   creator: "Globalyn",
+
   publisher: "Globalyn",
 
   category: "News and Media",
 
   applicationName: "Globalyn",
+
+  alternates: {
+    canonical: "/",
+  },
 
   formatDetection: {
     email: false,
@@ -60,6 +68,8 @@ export const metadata: Metadata = {
 
     description:
       "Discover global news, business insights, technology trends, innovation stories, startups, and ideas shaping the future.",
+
+    url: "https://globalyn.vercel.app",
 
     siteName: "Globalyn",
 
@@ -74,9 +84,7 @@ export const metadata: Metadata = {
     title: "Globalyn | Global News, Business & Innovation",
 
     description:
-      "Global news, business insights, technology, innovation, and stories shaping tomorrow.",
-
-    creator: "@Globalyn",
+      "Discover global news, business insights, technology trends, innovation stories, startups, and ideas shaping tomorrow.",
   },
 
   robots: {
