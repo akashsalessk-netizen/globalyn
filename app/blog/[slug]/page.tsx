@@ -18,6 +18,14 @@ status: string | null;
 created_at?: string | null;
 };
 
+type AuthorProfile = {
+id: number;
+name: string;
+username: string | null;
+bio: string | null;
+image_url: string | null;
+};
+
 type BlogArticlePageProps = {
 params: Promise<{
 slug: string;
@@ -37,6 +45,21 @@ return null;
 }
 
 return data as Article;
+}
+
+async function getAuthorProfile() {
+const { data, error } = await supabase
+.from("authors")
+.select("*")
+.order("id", { ascending: true })
+.limit(1)
+.maybeSingle();
+
+if (error || !data) {
+return null;
+}
+
+return data as AuthorProfile;
 }
 
 export async function generateMetadata({
@@ -84,13 +107,10 @@ openGraph: {
   siteName: "Globalyn",
   type: "article",
   locale: "en_US",
-
   publishedTime: article.created_at || undefined,
-
   authors: article.author
     ? [article.author]
     : undefined,
-
   section: article.category || undefined,
 
   images: article.image_url
@@ -109,10 +129,8 @@ twitter: {
   card: article.image_url
     ? "summary_large_image"
     : "summary",
-
   title,
   description,
-
   images: article.image_url
     ? [article.image_url]
     : undefined,
@@ -137,12 +155,24 @@ if (!article) {
 notFound();
 }
 
+const authorProfile = await getAuthorProfile();
+
+const authorName =
+authorProfile?.name ||
+article.author ||
+"GLOBALYN";
+
+const authorUsername =
+authorProfile?.username || "";
+
+const authorBio =
+authorProfile?.bio || "";
+
+const authorImage =
+authorProfile?.image_url || "";
+
 const plainText = (article.content || "")
 .replace(/<[^>]*>/g, " ")
-.replace(/ /g, " ")
-.replace(/&/g, "&")
-.replace(/</g, "<")
-.replace(/>/g, ">")
 .replace(/\s+/g, " ")
 .trim();
 
@@ -157,13 +187,14 @@ Math.ceil(wordCount / 220)
 
 return (
 <main className="min-h-screen bg-white text-slate-900">
-{/* HEADER */}
-<header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-<div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
-<Link href="/" className="flex items-center gap-3" >
-<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-lg font-black text-white shadow-lg">
-G
-</div>
+
+  {/* HEADER */}
+  <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
+      <Link href="/" className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-lg font-black text-white shadow-lg">
+          G
+        </div>
 
         <div>
           <p className="font-black tracking-tight text-slate-950">
@@ -188,6 +219,7 @@ G
   {/* ARTICLE HERO */}
   <section className="border-b border-slate-200 bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
     <div className="mx-auto max-w-5xl px-5 py-12 sm:px-8 sm:py-20">
+
       {article.category && (
         <div className="mb-6">
           <span className="inline-flex rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-lg">
@@ -206,24 +238,39 @@ G
         </p>
       )}
 
+      {/* AUTHOR INFORMATION */}
       <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4 text-sm text-slate-500">
-        {article.author && (
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 font-black text-purple-700">
-              {article.author.charAt(0).toUpperCase()}
-            </div>
 
-            <div>
-              <p className="text-xs text-slate-400">
-                Written by
-              </p>
+        <div className="flex items-center gap-3">
 
-              <p className="font-bold text-slate-900">
-                {article.author}
-              </p>
+          {authorImage ? (
+            <img
+              src={authorImage}
+              alt={authorName}
+              className="h-11 w-11 rounded-full border-2 border-purple-100 object-cover shadow-sm"
+            />
+          ) : (
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-100 font-black text-purple-700">
+              {authorName.charAt(0).toUpperCase()}
             </div>
+          )}
+
+          <div>
+            <p className="text-xs text-slate-400">
+              Written by
+            </p>
+
+            <p className="font-bold text-slate-900">
+              {authorName}
+            </p>
+
+            {authorUsername && (
+              <p className="text-xs font-semibold text-purple-600">
+                {authorUsername}
+              </p>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="flex items-center gap-2">
           <span>📖</span>
@@ -234,7 +281,15 @@ G
           <span>📝</span>
           <span>{wordCount} words</span>
         </div>
+
       </div>
+
+      {authorBio && (
+        <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-500">
+          {authorBio}
+        </p>
+      )}
+
     </div>
   </section>
 
@@ -294,6 +349,7 @@ G
       © {new Date().getFullYear()} GLOBALYN. All rights reserved.
     </div>
   </footer>
+
 </main>
 
 );
