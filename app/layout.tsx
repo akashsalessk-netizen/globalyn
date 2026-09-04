@@ -14,6 +14,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://globalyn.vercel.app"),
+  verification: {
+    google: "zq5fNzkNEHUq95a7pSlGvE8-zscHGtf-1iRk2B-FVho",
+  },
 
   title: {
     default: "Globalyn | Global News, Business & Innovation",
