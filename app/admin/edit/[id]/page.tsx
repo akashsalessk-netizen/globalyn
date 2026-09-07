@@ -29,9 +29,7 @@ const CATEGORIES = [
 export default function EditArticlePage() {
   const params = useParams();
   const router = useRouter();
-
   const editorRef = useRef<HTMLDivElement>(null);
-  const savedRangeRef = useRef<Range | null>(null);
 
   const idParam = params.id;
   const articleId = Array.isArray(idParam) ? idParam[0] : idParam;
@@ -64,6 +62,8 @@ export default function EditArticlePage() {
   }
 
   function htmlToPlainText(html: string) {
+    if (!html) return "";
+
     if (typeof window === "undefined") {
       return html.replace(/<[^>]*>/g, " ");
     }
@@ -79,53 +79,6 @@ export default function EditArticlePage() {
       .replace(/\u00a0/g, " ")
       .replace(/\s+/g, " ")
       .trim();
-  }
-
-  /*
-    SAVE THE CURRENT TEXT SELECTION
-
-    This is important because clicking toolbar buttons normally
-    removes the selected text from the editor.
-  */
-  function saveSelection() {
-    const selection = window.getSelection();
-
-    if (
-      selection &&
-      selection.rangeCount > 0 &&
-      editorRef.current
-    ) {
-      const range = selection.getRangeAt(0);
-
-      if (
-        editorRef.current.contains(range.commonAncestorContainer)
-      ) {
-        savedRangeRef.current = range.cloneRange();
-      }
-    }
-  }
-
-  /*
-    RESTORE THE TEXT SELECTION
-  */
-  function restoreSelection() {
-    const selection = window.getSelection();
-
-    if (!selection || !savedRangeRef.current) return;
-
-    selection.removeAllRanges();
-    selection.addRange(savedRangeRef.current);
-
-    editorRef.current?.focus();
-  }
-
-  /*
-    PREVENT TOOLBAR BUTTONS FROM DESTROYING SELECTION
-  */
-  function preventEditorBlur(
-    event: React.MouseEvent<HTMLButtonElement>
-  ) {
-    event.preventDefault();
   }
 
   useEffect(() => {
@@ -144,9 +97,7 @@ export default function EditArticlePage() {
           .eq("id", articleId)
           .single();
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         const article = data as Article;
 
@@ -165,9 +116,7 @@ export default function EditArticlePage() {
         );
       } catch (error) {
         console.error("Load article error:", error);
-
         alert("Could not load this article.");
-
         router.push("/admin");
       } finally {
         setLoading(false);
@@ -201,81 +150,72 @@ export default function EditArticlePage() {
     if (!editorRef.current) return;
 
     setContent(editorRef.current.innerHTML);
-
-    saveSelection();
   }
 
-  /*
-    BASIC TEXT FORMATTING
-  */
-  function formatText(command: string, value?: string) {
-    restoreSelection();
-
-    document.execCommand(command, false, value);
-
-    if (editorRef.current) {
-      setContent(editorRef.current.innerHTML);
-    }
-
-    saveSelection();
+  function keepEditorFocus(
+    event: React.MouseEvent<HTMLButtonElement>
+  ) {
+    event.preventDefault();
   }
 
-  /*
-    HEADINGS AND PARAGRAPHS
-  */
+  function formatText(command: string) {
+    if (!editorRef.current) return;
+
+    editorRef.current.focus();
+
+    document.execCommand(command, false);
+
+    handleEditorInput();
+  }
+
   function formatBlock(tag: string) {
-    restoreSelection();
+    if (!editorRef.current) return;
 
-    document.execCommand("formatBlock", false, `<${tag}>`);
+    editorRef.current.focus();
 
-    if (editorRef.current) {
-      setContent(editorRef.current.innerHTML);
-    }
+    document.execCommand(
+      "formatBlock",
+      false,
+      `<${tag}>`
+    );
 
-    saveSelection();
+    handleEditorInput();
   }
 
-  /*
-    FONT SIZE
-  */
   function changeFontSize(size: string) {
-    restoreSelection();
+    if (!editorRef.current) return;
+
+    editorRef.current.focus();
 
     const selection = window.getSelection();
 
     if (!selection || selection.rangeCount === 0) {
+      alert("Please select some text first.");
       return;
     }
 
     const range = selection.getRangeAt(0);
 
     if (range.collapsed) {
+      alert("Please select some text first.");
       return;
     }
 
     const selectedContent = range.extractContents();
 
     const span = document.createElement("span");
-
     span.style.fontSize = `${size}px`;
 
     span.appendChild(selectedContent);
-
     range.insertNode(span);
 
     selection.removeAllRanges();
 
     const newRange = document.createRange();
-
     newRange.selectNodeContents(span);
-
     selection.addRange(newRange);
 
-    if (editorRef.current) {
-      setContent(editorRef.current.innerHTML);
-    }
-
-    savedRangeRef.current = newRange.cloneRange();
+    handleEditorInput();
   }
 
   async function saveArticle() {
@@ -294,7 +234,8 @@ export default function EditArticlePage() {
       return;
     }
 
-    const plainArticleContent = htmlToPlainText(content);
+    const plainArticleContent =
+      htmlToPlainText(content);
 
     if (!plainArticleContent.trim()) {
       alert("Please enter article content.");
@@ -314,9 +255,7 @@ export default function EditArticlePage() {
           .neq("id", articleId)
           .maybeSingle();
 
-      if (slugError) {
-        throw slugError;
-      }
+      if (slugError) throw slugError;
 
       if (existingArticle) {
         alert("This article URL is already being used.");
@@ -337,9 +276,7 @@ export default function EditArticlePage() {
         })
         .eq("id", articleId);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       alert(
         status === "published"
@@ -402,8 +339,6 @@ export default function EditArticlePage() {
   return (
     <main className="min-h-screen bg-[#f4f1eb] text-stone-900">
 
-      {/* HEADER */}
-
       <header className="sticky top-0 z-50 border-b border-stone-300 bg-[#faf8f3]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-8">
 
@@ -427,10 +362,9 @@ export default function EditArticlePage() {
           </Link>
 
           <div className="flex items-center gap-3">
-
             <Link
               href="/admin"
-              className="hidden border border-stone-300 bg-transparent px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-100 sm:block"
+              className="hidden border border-stone-300 px-4 py-2.5 text-sm font-bold text-stone-700 transition hover:bg-stone-100 sm:block"
             >
               ← Back
             </Link>
@@ -439,16 +373,13 @@ export default function EditArticlePage() {
               type="button"
               onClick={saveArticle}
               disabled={saving}
-              className="bg-stone-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="bg-stone-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-stone-700 disabled:opacity-60"
             >
               {saving ? "Saving..." : "Save Changes"}
             </button>
-
           </div>
         </div>
       </header>
-
-      {/* EDITORIAL HERO */}
 
       <section className="border-b border-stone-300 bg-[#faf8f3]">
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
@@ -474,62 +405,51 @@ export default function EditArticlePage() {
             </div>
 
             <div className="flex gap-3">
-
               <div className="border border-stone-300 bg-white px-5 py-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                <p className="text-xs font-bold uppercase text-stone-500">
                   Words
                 </p>
 
-                <p className="mt-2 text-3xl font-black text-stone-950">
+                <p className="mt-2 text-3xl font-black">
                   {wordCount}
                 </p>
               </div>
 
               <div className="border border-stone-300 bg-white px-5 py-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-stone-500">
+                <p className="text-xs font-bold uppercase text-stone-500">
                   Reading
                 </p>
 
-                <p className="mt-2 text-3xl font-black text-stone-950">
+                <p className="mt-2 text-3xl font-black">
                   {readTime}m
                 </p>
               </div>
-
             </div>
 
           </div>
         </div>
       </section>
 
-      {/* MAIN CONTENT */}
-
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-12">
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_330px]">
 
-          {/* LEFT SIDE */}
-
           <div className="space-y-8">
-
-            {/* ARTICLE INFORMATION */}
 
             <div className="border border-stone-300 bg-[#faf8f3] p-6 sm:p-10">
 
               <div className="border-b border-stone-300 pb-6">
-
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500">
                   Article Details
                 </p>
 
-                <h2 className="mt-3 font-serif text-3xl font-black text-stone-950">
+                <h2 className="mt-3 font-serif text-3xl font-black">
                   The essentials
                 </h2>
-
               </div>
 
               <div className="mt-8">
-
-                <label className="text-sm font-bold text-stone-800">
+                <label className="text-sm font-bold">
                   Article Title *
                 </label>
 
@@ -540,19 +460,16 @@ export default function EditArticlePage() {
                     handleTitleChange(e.target.value)
                   }
                   placeholder="Enter your article title..."
-                  className="mt-3 w-full border-b-2 border-stone-300 bg-transparent px-0 py-4 text-xl font-bold outline-none transition focus:border-stone-950"
+                  className="mt-3 w-full border-b-2 border-stone-300 bg-transparent px-0 py-4 text-xl font-bold outline-none focus:border-stone-950"
                 />
-
               </div>
 
               <div className="mt-8">
-
-                <label className="text-sm font-bold text-stone-800">
+                <label className="text-sm font-bold">
                   Article URL *
                 </label>
 
                 <div className="mt-3 flex border-b-2 border-stone-300">
-
                   <span className="flex items-center py-4 pr-3 text-sm font-bold text-stone-400">
                     /blog/
                   </span>
@@ -566,14 +483,11 @@ export default function EditArticlePage() {
                     placeholder="article-url"
                     className="min-w-0 flex-1 bg-transparent py-4 text-sm font-semibold outline-none"
                   />
-
                 </div>
-
               </div>
 
               <div className="mt-8">
-
-                <label className="text-sm font-bold text-stone-800">
+                <label className="text-sm font-bold">
                   Article Excerpt
                 </label>
 
@@ -584,33 +498,30 @@ export default function EditArticlePage() {
                   }
                   rows={4}
                   placeholder="Write a short summary of your article..."
-                  className="mt-3 w-full border border-stone-300 bg-white p-4 leading-7 outline-none transition focus:border-stone-950"
+                  className="mt-3 w-full border border-stone-300 bg-white p-4 leading-7 outline-none focus:border-stone-950"
                 />
-
               </div>
 
             </div>
 
-            {/* ARTICLE CONTENT */}
+            {/* ARTICLE EDITOR */}
 
             <div className="border border-stone-300 bg-[#faf8f3] p-6 sm:p-10">
 
               <div className="flex flex-col justify-between gap-5 border-b border-stone-300 pb-6 sm:flex-row sm:items-end">
 
                 <div>
-
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500">
                     The Story
                   </p>
 
-                  <h2 className="mt-3 font-serif text-3xl font-black text-stone-950">
+                  <h2 className="mt-3 font-serif text-3xl font-black">
                     Write your article
                   </h2>
 
                   <p className="mt-2 text-sm text-stone-500">
                     Your formatting will be preserved.
                   </p>
-
                 </div>
 
                 <p className="text-sm font-bold text-stone-500">
@@ -619,17 +530,15 @@ export default function EditArticlePage() {
 
               </div>
 
-              {/* EDIT / PREVIEW */}
-
               <div className="mt-6 flex gap-2 border-b border-stone-300 pb-4">
 
                 <button
                   type="button"
                   onClick={() => setEditorMode("edit")}
-                  className={`px-5 py-2.5 text-sm font-bold transition ${
+                  className={`px-5 py-2.5 text-sm font-bold ${
                     editorMode === "edit"
                       ? "bg-stone-950 text-white"
-                      : "border border-stone-300 bg-white text-stone-600 hover:bg-stone-100"
+                      : "border border-stone-300 bg-white text-stone-600"
                   }`}
                 >
                   Edit
@@ -638,10 +547,10 @@ export default function EditArticlePage() {
                 <button
                   type="button"
                   onClick={() => setEditorMode("preview")}
-                  className={`px-5 py-2.5 text-sm font-bold transition ${
+                  className={`px-5 py-2.5 text-sm font-bold ${
                     editorMode === "preview"
                       ? "bg-stone-950 text-white"
-                      : "border border-stone-300 bg-white text-stone-600 hover:bg-stone-100"
+                      : "border border-stone-300 bg-white text-stone-600"
                   }`}
                 >
                   Preview
@@ -655,81 +564,71 @@ export default function EditArticlePage() {
 
                   {/* TOOLBAR */}
 
-                  <div
-                    className="flex flex-wrap items-center gap-2 border-b border-stone-300 bg-stone-100 p-3"
-                    onMouseDown={(e) => e.preventDefault()}
-                  >
+                  <div className="flex flex-wrap items-center gap-2 border-b border-stone-300 bg-stone-100 p-3">
 
                     {/* HEADINGS */}
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() => formatBlock("h1")}
-                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-black hover:bg-stone-200"
-                      title="Heading 1"
+                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-black"
                     >
                       H1
                     </button>
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() => formatBlock("h2")}
-                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-black hover:bg-stone-200"
-                      title="Heading 2"
+                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-black"
                     >
                       H2
                     </button>
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() => formatBlock("h3")}
-                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-black hover:bg-stone-200"
-                      title="Heading 3"
+                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-black"
                     >
                       H3
                     </button>
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() => formatBlock("p")}
-                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-bold hover:bg-stone-200"
-                      title="Paragraph"
+                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-bold"
                     >
                       P
                     </button>
 
-                    {/* BASIC FORMATTING */}
+                    {/* BASIC */}
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() => formatText("bold")}
-                      className="h-10 min-w-10 border border-stone-300 bg-white px-3 font-black hover:bg-stone-200"
-                      title="Bold"
+                      className="h-10 min-w-10 border border-stone-300 bg-white px-3 font-black"
                     >
                       B
                     </button>
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() => formatText("italic")}
-                      className="h-10 min-w-10 border border-stone-300 bg-white px-3 font-bold italic hover:bg-stone-200"
-                      title="Italic"
+                      className="h-10 min-w-10 border border-stone-300 bg-white px-3 font-bold italic"
                     >
                       I
                     </button>
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() => formatText("underline")}
-                      className="h-10 min-w-10 border border-stone-300 bg-white px-3 font-bold underline hover:bg-stone-200"
-                      title="Underline"
+                      className="h-10 min-w-10 border border-stone-300 bg-white px-3 font-bold underline"
                     >
                       U
                     </button>
@@ -746,7 +645,6 @@ export default function EditArticlePage() {
                         }
                       }}
                       className="h-10 border border-stone-300 bg-white px-3 text-sm font-bold outline-none"
-                      title="Font Size"
                     >
                       <option value="" disabled>
                         Size
@@ -771,28 +669,28 @@ export default function EditArticlePage() {
                       <option value="48">48 px</option>
                     </select>
 
-                    {/* LISTS */}
+                    {/* BULLET LIST */}
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() =>
                         formatText("insertUnorderedList")
                       }
-                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-bold hover:bg-stone-200"
-                      title="Bullet List"
+                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-bold"
                     >
                       • List
                     </button>
 
+                    {/* NUMBER LIST */}
+
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() =>
                         formatText("insertOrderedList")
                       }
-                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-bold hover:bg-stone-200"
-                      title="Numbered List"
+                      className="h-10 border border-stone-300 bg-white px-3 text-sm font-bold"
                     >
                       1. List
                     </button>
@@ -801,36 +699,33 @@ export default function EditArticlePage() {
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() =>
                         formatText("justifyLeft")
                       }
-                      className="h-10 border border-stone-300 bg-white px-3 font-bold hover:bg-stone-200"
-                      title="Align Left"
+                      className="h-10 border border-stone-300 bg-white px-3 font-bold"
                     >
                       ☰
                     </button>
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() =>
                         formatText("justifyCenter")
                       }
-                      className="h-10 border border-stone-300 bg-white px-3 font-bold hover:bg-stone-200"
-                      title="Align Center"
+                      className="h-10 border border-stone-300 bg-white px-3 font-bold"
                     >
                       ≡
                     </button>
 
                     <button
                       type="button"
-                      onMouseDown={preventEditorBlur}
+                      onMouseDown={keepEditorFocus}
                       onClick={() =>
                         formatText("justifyRight")
                       }
-                      className="h-10 border border-stone-300 bg-white px-3 font-bold hover:bg-stone-200"
-                      title="Align Right"
+                      className="h-10 border border-stone-300 bg-white px-3 font-bold"
                     >
                       ☷
                     </button>
@@ -844,10 +739,7 @@ export default function EditArticlePage() {
                     contentEditable
                     suppressContentEditableWarning
                     onInput={handleEditorInput}
-                    onKeyUp={saveSelection}
-                    onMouseUp={saveSelection}
-                    onFocus={saveSelection}
-                    className="article-editor min-h-[550px] w-full px-6 py-6 text-base leading-8 text-stone-700 outline-none sm:min-h-[650px] sm:px-8 sm:py-8"
+                    className="editor-content min-h-[550px] w-full px-6 py-6 text-base leading-8 text-stone-700 outline-none sm:min-h-[650px] sm:px-8 sm:py-8"
                   />
 
                 </div>
@@ -863,12 +755,9 @@ export default function EditArticlePage() {
 
               )}
 
-              <div className="mt-5 flex justify-between border-t border-stone-300 pt-5 text-xs font-medium text-stone-400">
-
+              <div className="mt-5 flex justify-between border-t border-stone-300 pt-5 text-xs text-stone-400">
                 <span>{wordCount} words</span>
-
                 <span>{content.length} characters</span>
-
               </div>
 
             </div>
@@ -878,8 +767,6 @@ export default function EditArticlePage() {
           {/* SIDEBAR */}
 
           <aside className="space-y-6 lg:sticky lg:top-24 lg:h-fit">
-
-            {/* PUBLISHING */}
 
             <div className="bg-stone-950 p-7 text-white">
 
@@ -891,16 +778,12 @@ export default function EditArticlePage() {
                 Ready to publish?
               </h2>
 
-              <p className="mt-3 text-sm leading-6 text-stone-400">
-                Choose whether this story stays private or becomes publicly visible.
-              </p>
-
               <div className="mt-6 grid grid-cols-2 gap-3">
 
                 <button
                   type="button"
                   onClick={() => setStatus("draft")}
-                  className={`py-3 text-sm font-bold transition ${
+                  className={`py-3 text-sm font-bold ${
                     status === "draft"
                       ? "bg-white text-stone-950"
                       : "border border-white/20 text-stone-400"
@@ -912,7 +795,7 @@ export default function EditArticlePage() {
                 <button
                   type="button"
                   onClick={() => setStatus("published")}
-                  className={`py-3 text-sm font-bold transition ${
+                  className={`py-3 text-sm font-bold ${
                     status === "published"
                       ? "bg-emerald-500 text-white"
                       : "border border-white/20 text-stone-400"
@@ -927,22 +810,16 @@ export default function EditArticlePage() {
                 type="button"
                 onClick={saveArticle}
                 disabled={saving}
-                className="mt-5 w-full bg-white px-4 py-4 text-sm font-black text-stone-950 transition hover:bg-stone-200 disabled:opacity-60"
+                className="mt-5 w-full bg-white px-4 py-4 text-sm font-black text-stone-950 disabled:opacity-60"
               >
                 {saving ? "Saving..." : "Save Changes"}
               </button>
 
             </div>
 
-            {/* SETTINGS */}
-
             <div className="border border-stone-300 bg-[#faf8f3] p-6">
 
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500">
-                Settings
-              </p>
-
-              <h2 className="mt-3 font-serif text-2xl font-black">
+              <h2 className="font-serif text-2xl font-black">
                 Article details
               </h2>
 
@@ -957,7 +834,7 @@ export default function EditArticlePage() {
                   onChange={(e) =>
                     setCategory(e.target.value)
                   }
-                  className="mt-3 w-full border border-stone-300 bg-white px-4 py-3.5 text-sm outline-none focus:border-stone-950"
+                  className="mt-3 w-full border border-stone-300 bg-white px-4 py-3.5"
                 >
                   {CATEGORIES.map((item) => (
                     <option key={item} value={item}>
@@ -981,28 +858,18 @@ export default function EditArticlePage() {
                     setAuthor(e.target.value)
                   }
                   placeholder="Enter author name..."
-                  className="mt-3 w-full border border-stone-300 bg-white px-4 py-3.5 outline-none focus:border-stone-950"
+                  className="mt-3 w-full border border-stone-300 bg-white px-4 py-3.5"
                 />
 
               </div>
 
             </div>
 
-            {/* FEATURED IMAGE */}
-
             <div className="border border-stone-300 bg-[#faf8f3] p-6">
 
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-stone-500">
-                Visual
-              </p>
-
-              <h2 className="mt-3 font-serif text-2xl font-black">
+              <h2 className="font-serif text-2xl font-black">
                 Featured image
               </h2>
-
-              <p className="mt-3 text-sm leading-6 text-stone-500">
-                Add or update the main image for this story.
-              </p>
 
               {imageUrl ? (
 
@@ -1012,15 +879,12 @@ export default function EditArticlePage() {
                     src={imageUrl}
                     alt="Article preview"
                     className="h-52 w-full border border-stone-300 object-cover"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
                   />
 
                   <button
                     type="button"
                     onClick={removeImage}
-                    className="mt-4 w-full border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100"
+                    className="mt-4 w-full border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600"
                   >
                     Remove Image
                   </button>
@@ -1030,13 +894,10 @@ export default function EditArticlePage() {
               ) : (
 
                 <div className="mt-6 border-2 border-dashed border-stone-300 bg-stone-100 px-5 py-10 text-center">
-
                   <p className="text-3xl">🖼️</p>
-
-                  <p className="mt-3 text-sm font-medium text-stone-500">
+                  <p className="mt-3 text-sm text-stone-500">
                     No featured image
                   </p>
-
                 </div>
 
               )}
@@ -1054,30 +915,26 @@ export default function EditArticlePage() {
                     setImageUrl(e.target.value)
                   }
                   placeholder="https://example.com/image.jpg"
-                  className="mt-3 w-full border border-stone-300 bg-white px-4 py-3.5 text-sm outline-none focus:border-stone-950"
+                  className="mt-3 w-full border border-stone-300 bg-white px-4 py-3.5 text-sm"
                 />
 
               </div>
 
             </div>
 
-            {/* PREVIEW */}
-
             {slug && (
-
               <Link
                 href={`/blog/${slug}`}
                 target="_blank"
-                className="flex w-full items-center justify-center border border-stone-900 bg-transparent px-5 py-4 text-sm font-bold text-stone-900 transition hover:bg-stone-900 hover:text-white"
+                className="flex w-full items-center justify-center border border-stone-900 px-5 py-4 text-sm font-bold"
               >
                 👁 Preview Article
               </Link>
-
             )}
 
             <Link
               href="/admin"
-              className="flex w-full items-center justify-center border border-stone-300 bg-white px-5 py-4 text-sm font-bold text-stone-600 transition hover:bg-stone-100"
+              className="flex w-full items-center justify-center border border-stone-300 bg-white px-5 py-4 text-sm font-bold text-stone-600"
             >
               ← Cancel and Return
             </Link>
@@ -1088,11 +945,11 @@ export default function EditArticlePage() {
 
       </section>
 
-      {/* EDITOR AND PREVIEW STYLES */}
+      {/* EDITOR + PREVIEW STYLES */}
 
-      <style jsx>{`
+      <style jsx global>{`
 
-        .article-editor h1,
+        .editor-content h1,
         .article-preview h1 {
           font-size: 2.5rem;
           font-weight: 900;
@@ -1101,65 +958,63 @@ export default function EditArticlePage() {
           margin: 2rem 0 1rem;
         }
 
-        .article-editor h2,
+        .editor-content h2,
         .article-preview h2 {
           font-size: 2rem;
           font-weight: 900;
-          line-height: 1.25;
+          line-height: 1.2;
           color: #1c1917;
-          margin: 2rem 0 1rem;
+          margin: 1.8rem 0 1rem;
         }
 
-        .article-editor h3,
+        .editor-content h3,
         .article-preview h3 {
           font-size: 1.5rem;
           font-weight: 800;
-          line-height: 1.35;
+          line-height: 1.3;
           color: #1c1917;
           margin: 1.5rem 0 0.75rem;
         }
 
-        .article-editor p,
+        .editor-content p,
         .article-preview p {
           margin-bottom: 1.25rem;
           line-height: 1.9;
         }
 
-        .article-editor ul,
+        .editor-content ul,
         .article-preview ul {
-          margin: 1.25rem 0;
-          padding-left: 2rem;
-          list-style-type: disc;
+          list-style-type: disc !important;
+          padding-left: 2rem !important;
+          margin: 1.25rem 0 !important;
         }
 
-        .article-editor ol,
+        .editor-content ol,
         .article-preview ol {
-          margin: 1.25rem 0;
-          padding-left: 2rem;
-          list-style-type: decimal;
+          list-style-type: decimal !important;
+          padding-left: 2rem !important;
+          margin: 1.25rem 0 !important;
         }
 
-        .article-editor li,
+        .editor-content li,
         .article-preview li {
-          display: list-item;
+          display: list-item !important;
           margin-bottom: 0.5rem;
           line-height: 1.8;
         }
 
-        .article-editor strong,
+        .article-preview {
+          color: #44403c;
+        }
+
         .article-preview strong {
           font-weight: 800;
           color: #1c1917;
         }
 
-        .article-editor img,
         .article-preview img {
           max-width: 100%;
           height: auto;
-        }
-
-        .article-preview {
-          color: #44403c;
         }
 
       `}</style>
