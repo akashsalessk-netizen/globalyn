@@ -140,8 +140,6 @@ export default function AdminDashboard() {
         );
       }
 
-      /* Update dashboard immediately */
-
       setArticles((currentArticles) =>
         currentArticles.map((item) =>
           item.id === article.id
@@ -291,7 +289,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fafafa] text-slate-900">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 text-slate-900">
 
       {/* ================= HEADER ================= */}
 
@@ -304,8 +302,8 @@ export default function AdminDashboard() {
             className="flex items-center gap-3"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-lg font-black text-white">
-  G
-</div>
+              G
+            </div>
 
             <div>
               <p className="font-black tracking-tight">
@@ -341,6 +339,15 @@ export default function AdminDashboard() {
               Admin
             </Link>
 
+            {/* MY PROFILE */}
+
+            <Link
+              href="/admin/profile"
+              className="hover:text-slate-950"
+            >
+              👤 My Profile
+            </Link>
+
           </nav>
 
           <Link
@@ -356,7 +363,7 @@ export default function AdminDashboard() {
 
       {/* ================= HERO ================= */}
 
-      <section className="border-b border-slate-200 bg-white">
+      <section className="border-b border-slate-200 bg-white/70">
 
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
 
@@ -395,6 +402,15 @@ export default function AdminDashboard() {
                 className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold hover:bg-slate-50"
               >
                 View Website →
+              </Link>
+
+              {/* MY PROFILE */}
+
+              <Link
+                href="/admin/profile"
+                className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold transition hover:bg-slate-50"
+              >
+                👤 My Profile
               </Link>
 
               <Link
@@ -579,8 +595,6 @@ export default function AdminDashboard() {
 
           </div>
 
-          {/* RESULTS */}
-
           <p className="mt-5 text-sm font-semibold text-slate-500">
             Showing{" "}
             <span className="font-black text-slate-900">
@@ -666,8 +680,6 @@ export default function AdminDashboard() {
 
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
 
-                      {/* ARTICLE INFORMATION */}
-
                       <div className="flex min-w-0 items-start gap-4">
 
                         {article.image_url ? (
@@ -742,8 +754,6 @@ export default function AdminDashboard() {
 
                       <div className="flex flex-wrap items-center gap-2">
 
-                        {/* VIEW */}
-
                         {article.slug && isPublished && (
 
                           <Link
@@ -755,8 +765,6 @@ export default function AdminDashboard() {
                           </Link>
 
                         )}
-
-                        {/* PUBLISH / UNPUBLISH */}
 
                         <button
                           type="button"
@@ -777,16 +785,12 @@ export default function AdminDashboard() {
                             : "🚀 Publish"}
                         </button>
 
-                        {/* EDIT */}
-
                         <Link
                           href={`/admin/edit/${article.id}`}
                           className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold transition hover:bg-slate-50"
                         >
                           ✎ Edit
                         </Link>
-
-                        {/* DELETE */}
 
                         <button
                           type="button"

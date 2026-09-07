@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -12,30 +12,56 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"error" | "success">(
-    "error"
-  );
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    async function checkRecoverySession() {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("Session error:", error);
+        }
+
+        if (!data.session) {
+          setMessage(
+            "This password reset link is invalid or has expired. Please request a new password reset link."
+          );
+        }
+      } catch (error) {
+        console.error("Recovery session error:", error);
+
+        setMessage(
+          "Something went wrong while verifying your password reset link."
+        );
+      } finally {
+        setCheckingSession(false);
+      }
+    }
+
+    checkRecoverySession();
+  }, []);
 
   async function handleResetPassword(e: React.FormEvent) {
     e.preventDefault();
 
     setMessage("");
+    setSuccess(false);
 
-    if (!password.trim() || !confirmPassword.trim()) {
-      setMessageType("error");
-      setMessage("Please enter and confirm your new password.");
+    if (!password.trim()) {
+      setMessage("Please enter your new password.");
       return;
     }
 
     if (password.length < 6) {
-      setMessageType("error");
       setMessage("Your password must be at least 6 characters long.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setMessageType("error");
       setMessage("Passwords do not match.");
       return;
     }
@@ -48,33 +74,46 @@ export default function ResetPasswordPage() {
       });
 
       if (error) {
-        setMessageType("error");
         setMessage(error.message);
         return;
       }
 
-      setMessageType("success");
+      setSuccess(true);
+
       setMessage(
-        "Your password has been changed successfully! Redirecting to login..."
+        "Your password has been changed successfully! Redirecting you to the login page..."
       );
 
       setPassword("");
       setConfirmPassword("");
 
       setTimeout(() => {
-        router.push("/login");
+        router.push("/admin/login");
         router.refresh();
-      }, 2000);
+      }, 2500);
     } catch (error) {
-      console.error("Password reset error:", error);
+      console.error("Reset password error:", error);
 
-      setMessageType("error");
-      setMessage(
-        "Something went wrong while changing your password. Please try again."
-      );
+      setMessage("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 px-5">
+        <div className="text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-2xl font-black text-white shadow-xl">
+            G
+          </div>
+
+          <p className="mt-5 text-sm font-bold text-white">
+            Verifying your reset link...
+          </p>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -108,7 +147,7 @@ export default function ResetPasswordPage() {
 
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-purple-500">
-              Secure Account
+              Secure Account Recovery
             </p>
 
             <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950">
@@ -116,8 +155,7 @@ export default function ResetPasswordPage() {
             </h1>
 
             <p className="mt-3 leading-7 text-slate-500">
-              Choose a new secure password for your GLOBALYN Admin Studio
-              account.
+              Choose a strong new password to secure your GLOBALYN Admin Studio account.
             </p>
           </div>
 
@@ -141,7 +179,8 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your new password"
                 autoComplete="new-password"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+                disabled={loading}
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
 
               <p className="mt-2 text-xs text-slate-400">
@@ -162,7 +201,8 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm your new password"
                 autoComplete="new-password"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+                disabled={loading}
+                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3.5 text-sm outline-none transition focus:border-purple-500 focus:ring-4 focus:ring-purple-100 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
             </div>
 
@@ -171,11 +211,12 @@ export default function ResetPasswordPage() {
             {message && (
               <div
                 className={`rounded-xl px-4 py-3 text-sm font-medium ${
-                  messageType === "success"
-                    ? "border border-green-200 bg-green-50 text-green-700"
+                  success
+                    ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
                     : "border border-red-200 bg-red-50 text-red-600"
                 }`}
               >
+                {success ? "✅ " : "⚠️ "}
                 {message}
               </div>
             )}
@@ -184,10 +225,14 @@ export default function ResetPasswordPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || success}
               className="w-full rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 px-5 py-4 text-sm font-black text-white shadow-lg transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Updating Password..." : "Reset Password →"}
+              {loading
+                ? "Updating Password..."
+                : success
+                ? "Password Updated ✓"
+                : "Reset Password →"}
             </button>
 
           </form>
@@ -195,20 +240,20 @@ export default function ResetPasswordPage() {
           {/* BACK TO LOGIN */}
 
           <div className="mt-7 border-t border-slate-100 pt-6 text-center">
-
             <Link
-              href="/login"
+              href="/admin/login"
               className="text-sm font-bold text-slate-500 transition hover:text-purple-600"
             >
               ← Back to Sign In
             </Link>
-
           </div>
 
         </div>
 
+        {/* FOOTER */}
+
         <p className="mt-6 text-center text-xs text-slate-400">
-          GLOBALYN Admin Studio • Secure Access
+          GLOBALYN Admin Studio • Secure Password Reset
         </p>
 
       </div>
