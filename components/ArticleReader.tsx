@@ -22,6 +22,7 @@ if (savedTheme === "dark") {
 }
 
 setMounted(true);
+
 }, []);
 
 function toggleTheme() {
@@ -33,11 +34,14 @@ localStorage.setItem(
   "globalyn-reading-theme",
   newTheme ? "dark" : "light"
 );
+
 }
 
 if (!mounted) {
-return ( <div className="min-h-screen bg-white">
-{children} </div>
+return (
+<div className="min-h-screen bg-white">
+{children}
+</div>
 );
 }
 
@@ -54,12 +58,14 @@ type="button"
 onClick={toggleTheme}
 className={
 darkMode
-? "fixed bottom-6 right-6 z-[100] flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-2xl transition hover:scale-105 hover:bg-slate-800"
-: "fixed bottom-6 right-6 z-[100] flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 shadow-2xl transition hover:scale-105 hover:bg-slate-50"
+? "fixed bottom-6 right-6 z-[100] flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-2xl transition hover hover"
+: "fixed bottom-6 right-6 z-[100] flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-800 shadow-2xl transition hover hover"
 }
 aria-label="Change reading mode"
 >
-{darkMode ? "☀️ Light Mode" : "🌙 Dark Mode"} </button>
+{darkMode ? "☀️ Light Mode" : "🌙 Dark Mode"}
+</button>
+
   <div
     className={
       darkMode
@@ -147,5 +153,6 @@ aria-label="Change reading mode"
     }
   `}</style>
 </div>
+
 );
 }
